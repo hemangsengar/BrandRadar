@@ -20,7 +20,7 @@ class BrandContact(BaseModel):
 class BrandCard(BaseModel):
     brand_name: str
     last_sponsored_creator: str
-    last_sponsored_days_ago: int = 30
+    last_sponsored_days_ago: int = -1
     contact: BrandContact
     opener: str
     source_videos: list[str] = []

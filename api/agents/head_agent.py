@@ -71,50 +71,96 @@ class HeadAgent:
             )
 
         # ── STAGE 1: DISCOVER ──────────────────────────────────────────────
-        push("discover", "Running agentic search for similar Indian creators...", 0.1)
+        push("discover", "Looking up your channel and finding relevant sponsor brands...", 0.1)
         discovery = self._register(DiscoveryAgent(self.anakin))
         try:
-            creator_urls: list[str] = await discovery.run(channel_url)
+            seed_videos: list[dict] = await discovery.run(channel_url)
         except Exception:
-            creator_urls = []
-        push("discover", f"Found {len(creator_urls)} similar creators", 1.0)
+            seed_videos = []
 
-        if not creator_urls:
+        # Enrich creator_profile with real channel metadata for better openers
+        if discovery.channel_info:
+            info = discovery.channel_info
+            creator_profile = {
+                "channel_name": info.get("name") or creator_profile.get("channel_name", ""),
+                "channel_url": channel_url,
+                "niche": (info.get("keywords") or "")[:120] or creator_profile.get("niche", ""),
+                "description": (info.get("description") or "")[:200],
+            }
+
+        # Also collect the input channel's own recent videos so self-deals are caught by extract
+        own_channel_id = discovery.own_channel_id
+        own_videos: list[dict] = []
+        if own_channel_id:
+            push("discover", "Also scanning your own recent videos for past brand deals...", 0.85)
+            try:
+                handle = channel_url.rstrip("/").split("/")[-1].lstrip("@")
+                own_result = await self.anakin.wire("yt_search", {"query": handle, "limit": 10})
+                for item in (own_result.get("data") or []):
+                    if item.get("channel_id") == own_channel_id and item.get("video_id"):
+                        own_videos.append({
+                            "video_id": item["video_id"],
+                            "channel_id": own_channel_id,
+                            "channel_name": item.get("channel", handle),
+                            "title": item.get("title", ""),
+                            "url": item.get("url", f"https://www.youtube.com/watch?v={item['video_id']}"),
+                        })
+            except Exception:
+                pass
+
+        push("discover", f"Found {len(seed_videos)} videos from similar creators", 1.0)
+
+        if not seed_videos and not own_videos:
             update_job(stage="error", message="Could not find similar creators. Try a channel with more published content.", progress=0, agent_reports=[], api_calls={})
             return []
 
-        # ── STAGE 2: HARVEST (parallel) ────────────────────────────────────
-        push("harvest", f"Scraping recent videos from {len(creator_urls)} creators in parallel...", 0.05)
+        # ── STAGE 2: HARVEST (parallel per unique channel) ─────────────────
+        seen_channels: dict[str, str] = {}
+        for v in seed_videos:
+            cid = v.get("channel_id", "")
+            cname = v.get("channel_name", "")
+            if cid and cid not in seen_channels and cname:
+                seen_channels[cid] = cname
+
+        push("harvest", f"Fetching brand deal videos from {len(seen_channels)} similar channels...", 0.05)
         harvest_agents = [
-            self._register(HarvestAgent(self.anakin, url)) for url in creator_urls[:10]
+            self._register(HarvestAgent(self.anakin, name, channel_id=cid))
+            for cid, name in list(seen_channels.items())[:12]
         ]
         harvest_results = await asyncio.gather(
             *[a.run() for a in harvest_agents], return_exceptions=True
         )
-        push("harvest", "Parallel harvest complete", 0.9)
+        push("harvest", "Harvest complete", 0.9)
 
-        video_urls: list[str] = []
+        # Pool order: own videos → harvest (brand-deal targeted) → seed (discovery)
+        # Harvest must come before seed so it isn't squeezed out by the cap
+        all_videos: list[dict] = list(own_videos)
+        seen_ids = {v["video_id"] for v in own_videos}
+
         for r in harvest_results:
             if isinstance(r, list):
-                video_urls.extend(r)
-        video_urls = list(set(video_urls))[:60]
-        push("harvest", f"Collected {len(video_urls)} unique videos", 1.0)
-
-        if not video_urls:
-            update_job(stage="error", message="No videos found. Try a more active channel.", progress=0, agent_reports=[], api_calls={})
-            return []
+                for v in r:
+                    if v.get("video_id") not in seen_ids:
+                        seen_ids.add(v["video_id"])
+                        all_videos.append(v)
+        for v in seed_videos:
+            if v.get("video_id") not in seen_ids:
+                seen_ids.add(v["video_id"])
+                all_videos.append(v)
+        all_videos = all_videos[:100]
+        push("harvest", f"Collected {len(all_videos)} unique videos total", 1.0)
 
         # ── STAGE 3: EXTRACT ───────────────────────────────────────────────
-        push("extract", f"Extracting sponsor mentions from {len(video_urls)} videos with Anakin generateJson...", 0.1)
+        push("extract", f"Fetching descriptions for {len(all_videos)} videos via Wire yt_video...", 0.1)
         extract = self._register(ExtractAgent(self.anakin))
         try:
-            mentions: list[SponsorMention] = await extract.run(video_urls)
+            mentions: list[SponsorMention] = await extract.run(all_videos)
         except Exception:
             mentions = []
         push("extract", f"Found {len(mentions)} sponsor mentions", 1.0)
 
         if not mentions:
-            update_job(stage="error", message="No sponsor mentions found in the scraped videos.", progress=0, agent_reports=[], api_calls={})
+            update_job(stage="error", message="No sponsor mentions found. Try a channel in a niche with active Indian sponsorships.", progress=0, agent_reports=[], api_calls={})
             return []
 
         brand_map: dict[str, list[SponsorMention]] = defaultdict(list)
@@ -169,11 +215,11 @@ class HeadAgent:
     @staticmethod
     def _days_ago(date_str: Optional[str]) -> int:
         if not date_str:
-            return 30
+            return -1
         try:
             dt = dateparser.parse(date_str)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return max(0, (datetime.now(timezone.utc) - dt).days)
         except Exception:
-            return 30
+            return -1

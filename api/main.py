@@ -1,9 +1,11 @@
 import logging
 import os
+import time
+from collections import defaultdict
 from uuid import uuid4
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
@@ -28,6 +30,20 @@ app.add_middleware(
 _JOBS_MAX = 200
 jobs: dict[str, JobStatus] = {}
 
+_RATE_WINDOW = 300  # 5 minutes
+_RATE_LIMIT = 5     # max requests per window per IP
+_rate_store: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(ip: str) -> None:
+    now = time.time()
+    window_start = now - _RATE_WINDOW
+    timestamps = [t for t in _rate_store[ip] if t > window_start]
+    _rate_store[ip] = timestamps
+    if len(timestamps) >= _RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait a few minutes.")
+    _rate_store[ip].append(now)
+
 _anakin_client: AnakinClient | None = None
 
 
@@ -49,13 +65,21 @@ def _evict_old_jobs() -> None:
         jobs.pop(jid, None)
 
 
-def _creator_profile(channel_url: str) -> dict:
+def _creator_profile(channel_url: str, channel_info: dict | None = None) -> dict:
     handle = channel_url.rstrip("/").split("/")[-1].lstrip("@")
-    return {"channel_name": handle, "channel_url": channel_url, "niche": "educational content"}
+    if channel_info:
+        return {
+            "channel_name": channel_info.get("name") or handle,
+            "channel_url": channel_url,
+            "niche": (channel_info.get("keywords") or "")[:120] or "content creator",
+            "description": (channel_info.get("description") or "")[:200],
+        }
+    return {"channel_name": handle, "channel_url": channel_url, "niche": "content creator"}
 
 
 @app.post("/api/start")
-async def start(req: StartRequest, background_tasks: BackgroundTasks):
+async def start(req: StartRequest, background_tasks: BackgroundTasks, request: Request):
+    _check_rate_limit(request.client.host if request.client else "unknown")
     _evict_old_jobs()
 
     cached = get_cached(req.channel_url)
