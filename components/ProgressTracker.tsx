@@ -165,9 +165,9 @@ export default function ProgressTracker({
                 className="w-1.5 h-1.5 rounded-full transition-colors duration-300"
                 style={{
                   background:
-                    a.status === "completed" ? "#16A34A"
-                    : a.status === "failed"    ? "#DC2626"
-                    : a.status === "running"   ? "#FF7A1A"
+                    a.status === "complete" ? "#16A34A"
+                    : a.status === "failed"   ? "#DC2626"
+                    : a.status === "running"  ? "#FF7A1A"
                     : "#E8E6E1",
                   boxShadow: a.status === "running" ? "0 0 0 2px rgba(255,122,26,0.25)" : undefined,
                 }}
