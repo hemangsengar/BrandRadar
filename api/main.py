@@ -20,17 +20,11 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="BrandRadar API")
 
-_ALLOWED_ORIGINS = [
-    o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")
-    if o.strip()
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_ALLOWED_ORIGINS,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 _JOBS_MAX = 200
