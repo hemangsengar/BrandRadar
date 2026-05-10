@@ -30,8 +30,8 @@ class BaseAgent(ABC):
             self._on_update(self)
         logger.info(f"[{self.name}] {message}")
 
-    def track_api_call(self, endpoint: str):
-        self.api_calls[endpoint] = self.api_calls.get(endpoint, 0) + 1
+    def track_api_call(self, endpoint: str, count: int = 1):
+        self.api_calls[endpoint] = self.api_calls.get(endpoint, 0) + count
 
     @abstractmethod
     async def execute(self, *args, **kwargs) -> Any:

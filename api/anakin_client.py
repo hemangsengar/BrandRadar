@@ -14,20 +14,21 @@ _http = httpx.AsyncClient(
 
 
 def _extract_text(result: dict, *, agentic: bool = False) -> str:
-    """Pull readable text out of an Anakin API result regardless of response shape."""
     if agentic:
+        gj = result.get("generatedJson") or {}
         return (
-            result.get("content")
-            or result.get("answer")
-            or result.get("result")
+            gj.get("summary")
+            or gj.get("answer")
+            or result.get("content")
             or str(result)
         )
-    return result.get("content") or result.get("markdown") or str(result)
+    return result.get("markdown") or result.get("content") or str(result)
 
 
 def _extract_gen_json(result: dict) -> dict:
-    """Normalise both spelling variants of the AI-extracted JSON field."""
-    return result.get("generatedJson") or result.get("generated_json") or {}
+    gj = result.get("generatedJson") or result.get("generated_json") or {}
+    # url-scraper wraps structured fields under "data"
+    return gj.get("data") or gj if isinstance(gj, dict) else {}
 
 
 class AnakinError(Exception):
@@ -51,11 +52,9 @@ class AnakinClient:
         generate_json: bool = False,
         country: str = "in",
         session_id: str | None = None,
-        fmt: str = "markdown",
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "url": url,
-            "format": "json" if generate_json else fmt,
             "useBrowser": use_browser,
             "generateJson": generate_json,
             "country": country,
@@ -64,15 +63,15 @@ class AnakinClient:
             payload["sessionId"] = session_id
 
         resp = await _http.post(
-            f"{self.BASE_URL}/scrape", json=payload, headers=self._headers
+            f"{self.BASE_URL}/url-scraper", json=payload, headers=self._headers
         )
         resp.raise_for_status()
         job = resp.json()
 
-        job_id = job.get("id") or job.get("jobId")
+        job_id = job.get("jobId") or job.get("id")
         if not job_id:
             return job
-        return await self._poll(f"{self.BASE_URL}/scrape/{job_id}", timeout=120)
+        return await self._poll(f"{self.BASE_URL}/url-scraper/{job_id}", timeout=120)
 
     async def batch_scrape(
         self,
@@ -83,31 +82,60 @@ class AnakinClient:
     ) -> list[dict]:
         payload: dict[str, Any] = {
             "urls": urls,
-            "format": "json" if generate_json else "markdown",
             "useBrowser": use_browser,
             "generateJson": generate_json,
             "country": country,
         }
 
         resp = await _http.post(
-            f"{self.BASE_URL}/scrape/batch", json=payload, headers=self._headers
+            f"{self.BASE_URL}/url-scraper/batch", json=payload, headers=self._headers
         )
         resp.raise_for_status()
         job = resp.json()
 
-        job_id = job.get("id") or job.get("jobId")
+        job_id = job.get("jobId") or job.get("id")
         if not job_id:
             return job if isinstance(job, list) else []
 
+        # Batch jobs poll at the same /url-scraper/{jobId} endpoint as single jobs
         result = await self._poll(
-            f"{self.BASE_URL}/scrape/batch/{job_id}", timeout=300
+            f"{self.BASE_URL}/url-scraper/{job_id}", timeout=300
         )
         return result.get("results", result if isinstance(result, list) else [])
+
+    async def wire(self, action_id: str, params: dict, timeout: int = 90) -> dict[str, Any]:
+        """Execute a Wire (Holocron) pre-built action and return the result data."""
+        for attempt in range(4):
+            resp = await _http.post(
+                f"{self.BASE_URL}/holocron/task",
+                json={"action_id": action_id, "params": params},
+                headers=self._headers,
+            )
+            if resp.status_code == 429:
+                wait = int(resp.headers.get("Retry-After", 10)) * (attempt + 1)
+                await asyncio.sleep(wait)
+                continue
+            resp.raise_for_status()
+            break
+        else:
+            raise AnakinError("Wire rate limit exceeded after retries")
+        job = resp.json()
+
+        job_id = job.get("job_id") or job.get("id")
+        if not job_id:
+            return job
+
+        result = await self._poll(
+            f"{self.BASE_URL}/holocron/jobs/{job_id}",
+            timeout=timeout,
+            initial_interval=2.0,
+        )
+        return result.get("data") or result
 
     async def search(self, query: str) -> dict[str, Any]:
         resp = await _http.post(
             f"{self.BASE_URL}/search",
-            json={"query": query},
+            json={"prompt": query},
             headers=self._headers,
         )
         resp.raise_for_status()
@@ -116,19 +144,20 @@ class AnakinClient:
     async def agentic_search(self, query: str, timeout: int = 300) -> dict[str, Any]:
         resp = await _http.post(
             f"{self.BASE_URL}/agentic-search",
-            json={"query": query},
+            json={"prompt": query},
             headers=self._headers,
         )
         resp.raise_for_status()
         job = resp.json()
 
-        job_id = job.get("id") or job.get("jobId")
+        # Agentic search uses snake_case job_id in response
+        job_id = job.get("job_id") or job.get("id") or job.get("jobId")
         if not job_id:
             return job
         return await self._poll(
             f"{self.BASE_URL}/agentic-search/{job_id}",
             timeout=timeout,
-            initial_interval=2.0,
+            initial_interval=5.0,
         )
 
     async def _poll(
@@ -149,7 +178,10 @@ class AnakinClient:
                 elapsed += retry_after
                 continue
 
-            resp.raise_for_status()
+            # 202 means still processing; 200 means done (used by agentic-search)
+            if resp.status_code not in (200, 202):
+                resp.raise_for_status()
+
             data = resp.json()
             status = (data.get("status") or "").lower()
 
