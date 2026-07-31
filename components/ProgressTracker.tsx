@@ -72,48 +72,49 @@ export default function ProgressTracker({
             {status.progress}% complete
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-0">
-          {STAGES.map((s, i) => {
-            const isDone   = i < currentIdx;
-            const isActive = i === currentIdx;
-            const isPending = i > currentIdx;
-            return (
-              <div key={s.key} className="flex items-center flex-1 last:flex-none">
-                <div className="flex flex-col items-center gap-1.5">
-                  <div
-                    className="w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-500"
-                    style={{
-                      background: isDone ? "#16A34A" : isActive ? "#FF7A1A" : "#E8E6E1",
-                      boxShadow: isActive ? "0 0 0 3px rgba(255,122,26,0.2)" : undefined,
-                    }}
-                  />
-                  <span
-                    className="text-[10px] whitespace-nowrap transition-colors duration-300"
-                    style={{
-                      color: isDone ? "#16A34A" : isActive ? "#FF7A1A" : "#C4BFB9",
-                      fontWeight: isActive ? 600 : 400,
-                    }}
-                  >
-                    {s.label}
-                  </span>
+        <div className="mt-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-0 min-w-[420px]">
+            {STAGES.map((s, i) => {
+              const isDone   = i < currentIdx;
+              const isActive = i === currentIdx;
+              return (
+                <div key={s.key} className="flex items-center flex-1 last:flex-none">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-500"
+                      style={{
+                        background: isDone ? "#16A34A" : isActive ? "#FF7A1A" : "#E8E6E1",
+                        boxShadow: isActive ? "0 0 0 3px rgba(255,122,26,0.2)" : undefined,
+                      }}
+                    />
+                    <span
+                      className="text-[10px] whitespace-nowrap transition-colors duration-300"
+                      style={{
+                        color: isDone ? "#16A34A" : isActive ? "#FF7A1A" : "#C4BFB9",
+                        fontWeight: isActive ? 600 : 400,
+                      }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                  {i < STAGES.length - 1 && (
+                    <div
+                      className="flex-1 mx-1.5 transition-all duration-500"
+                      style={{
+                        height: "1.5px",
+                        background: isDone
+                          ? "linear-gradient(90deg, #16A34A, #BBF7D0)"
+                          : isActive
+                          ? "linear-gradient(90deg, #FF7A1A, #F0EDE8)"
+                          : "#F0EDE8",
+                        marginBottom: "14px",
+                      }}
+                    />
+                  )}
                 </div>
-                {i < STAGES.length - 1 && (
-                  <div
-                    className="flex-1 mx-1.5 transition-all duration-500"
-                    style={{
-                      height: "1.5px",
-                      background: isDone
-                        ? "linear-gradient(90deg, #16A34A, #BBF7D0)"
-                        : isActive
-                        ? "linear-gradient(90deg, #FF7A1A, #F0EDE8)"
-                        : "#F0EDE8",
-                      marginBottom: "14px",
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -175,7 +176,7 @@ export default function ProgressTracker({
       {/* Agent row */}
       {totalAgents > 0 && (
         <div
-          className="px-5 py-3 flex items-center gap-4 text-xs"
+          className="px-5 py-3 flex flex-wrap items-center gap-3 sm:gap-4 text-xs"
           style={{ borderTop: "1px solid #F0EDE8", color: "#A09A94" }}
         >
           {/* Agent dots */}
@@ -203,7 +204,7 @@ export default function ProgressTracker({
           {running > 0 && (
             <span style={{ color: "#FF7A1A" }}>{running} running</span>
           )}
-          <span className="ml-auto tabular-nums" style={{ fontFamily: "var(--font-mono)", fontSize: "11px" }}>
+          <span className="w-full sm:w-auto sm:ml-auto tabular-nums" style={{ fontFamily: "var(--font-mono)", fontSize: "11px" }}>
             {status.progress}%
           </span>
         </div>

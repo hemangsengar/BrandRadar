@@ -14,7 +14,7 @@ function CopyBtn({ text }: { text: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }}
-      className="text-xs shrink-0 transition-all duration-150 px-2 py-0.5 rounded"
+      className="text-xs shrink-0 transition-all duration-150 px-3 py-1.5 rounded min-h-8"
       style={{
         fontFamily: "var(--font-sans)",
         background: copied ? "rgba(22,163,74,0.08)" : "rgba(255,122,26,0.08)",
@@ -138,7 +138,7 @@ export default function BrandCard({ brand }: { brand: BrandCardType }) {
               href={brand.source_videos[0]}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs transition-opacity hover:opacity-70"
+              className="inline-flex items-center gap-1 rounded px-2 py-1 -mx-2 text-xs transition-opacity hover:opacity-70"
               style={{ color: "#FF7A1A" }}
             >
               video <ArrowUpRight size={12} />
@@ -177,7 +177,7 @@ export default function BrandCard({ brand }: { brand: BrandCardType }) {
           )}
 
           {brand.contact.email ? (
-            <div className="mt-2 flex items-center justify-between gap-3 rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #F0EDE8" }}>
+            <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg px-3 py-2" style={{ background: "#FFFFFF", border: "1px solid #F0EDE8" }}>
               <span
                 className="text-sm truncate"
                 style={{ fontFamily: "var(--font-mono)", color: "#FF7A1A", fontSize: "12px" }}

@@ -48,7 +48,7 @@ export default function SearchInput({
       style={{ filter: shake ? "none" : undefined }}
     >
       <div
-        className="flex rounded-xl overflow-hidden transition-all duration-200"
+        className="flex flex-col sm:flex-row rounded-xl overflow-hidden transition-all duration-200"
         style={{
           border: "1.5px solid",
           borderColor: value.length > 0 ? (valid ? "#FF7A1A" : "#E8E6E1") : "#E8E6E1",
@@ -73,7 +73,9 @@ export default function SearchInput({
 
         <input
           ref={inputRef}
-          type="text"
+          type="url"
+          inputMode="url"
+          autoCapitalize="none"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleClick()}
@@ -92,13 +94,12 @@ export default function SearchInput({
         <button
           onClick={handleClick}
           disabled={isLoading}
-          className="h-14 px-6 shrink-0 text-sm font-semibold transition-all duration-150"
+          className="h-14 px-4 sm:px-6 w-full sm:w-auto shrink-0 text-sm font-semibold transition-all duration-150 border-t sm:border-t-0 sm:border-l"
           style={{
             fontFamily: "var(--font-sans)",
             background: canSubmit ? "#FF7A1A" : isLoading ? "#FF7A1A" : "#F5F2ED",
             color: canSubmit || isLoading ? "#FFFFFF" : "#C4BFB9",
             cursor: isLoading ? "wait" : canSubmit ? "pointer" : "default",
-            borderLeft: "1.5px solid",
             borderColor: canSubmit || isLoading ? "#FF7A1A" : "#E8E6E1",
           }}
         >

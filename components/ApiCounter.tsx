@@ -22,7 +22,7 @@ export default function ApiCounter({ apiCalls, agentReports }: Props) {
 
   return (
     <div
-      className="fixed bottom-10 right-4 w-44 rounded-lg shadow-lg"
+      className="hidden sm:block fixed bottom-10 right-4 w-44 rounded-lg shadow-lg"
       style={{
         background: "#FFFFFF",
         border: "1px solid #E8E6E1",

@@ -103,7 +103,7 @@ export default function Home() {
           style={{ background: "linear-gradient(to bottom, transparent, #FAFAF8)" }}
         />
 
-        <div className="relative max-w-2xl mx-auto px-6 pt-20 pb-20 text-center">
+        <div className="relative max-w-2xl mx-auto px-4 sm:px-6 pt-20 pb-20 text-center">
 
           {/* Radar */}
           <div className="relative w-20 h-20 mx-auto mb-8 animate-fade-up">
@@ -131,7 +131,7 @@ export default function Home() {
 
           {/* Wordmark */}
           <h1
-            className="text-5xl font-black tracking-tight leading-none mb-4 animate-fade-up delay-75"
+            className="text-4xl sm:text-5xl font-black tracking-tight leading-none mb-4 animate-fade-up delay-75"
             style={{ fontFamily: "var(--font-syne)", color: "#0F0E0D" }}
           >
             Brand<span style={{ color: "#FF7A1A" }}>Radar</span>
@@ -227,7 +227,7 @@ export default function Home() {
           className="border-t"
           style={{ borderColor: "#E8E6E1" }}
         >
-          <div className="max-w-5xl mx-auto px-6 py-12 pb-28">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 pb-20 sm:pb-28">
 
             {/* Results header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
