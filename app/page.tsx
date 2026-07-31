@@ -76,6 +76,12 @@ export default function Home() {
     isLoading && status && !["queued", "complete", "error"].includes(status.stage);
 
   const isIdle = !isLoading && !status;
+  const loadingHeadline = status?.stage === "queued"
+    ? "Preparing your scan…"
+    : "Live analysis in progress";
+  const loadingBody = status?.stage === "queued"
+    ? "We’re starting the pipeline and will surface the first signals shortly."
+    : "We’re mapping similar creators, validating sponsorship signals, and assembling a pitch with contact details.";
 
   return (
     <main className="min-h-screen" style={{ background: "#FAFAF8" }}>
@@ -159,39 +165,39 @@ export default function Home() {
             </p>
           </div>
 
-          {/* How it works — only when idle */}
           {isIdle && (
-            <div className="flex items-center justify-center gap-0 mt-10 animate-fade-up delay-400">
-              {[
-                { n: "1", label: "Paste your channel" },
-                { n: "2", label: "We find similar creators" },
-                { n: "3", label: "Get brands + pitches" },
-              ].map((step, i) => (
-                <div key={i} className="flex items-center">
-                  <div className="flex items-center gap-2 px-3">
-                    <span
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
-                      style={{ background: "rgba(255,122,26,0.1)", color: "#FF7A1A", fontFamily: "var(--font-sans)" }}
-                    >
-                      {step.n}
-                    </span>
-                    <span className="text-xs whitespace-nowrap" style={{ color: "#6B6760", fontFamily: "var(--font-sans)" }}>
-                      {step.label}
-                    </span>
+            <div className="mt-8 rounded-2xl border border-[#E8E6E1] bg-white/80 p-5 text-left shadow-sm animate-fade-up delay-400">
+              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#0F0E0D", fontFamily: "var(--font-sans)" }}>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full" style={{ background: "rgba(255,122,26,0.1)", color: "#FF7A1A" }}>
+                  ✦
+                </span>
+                What you’ll get in a few minutes
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {[
+                  { title: "Similar creators", body: "We find channels in your niche that already have sponsorship history." },
+                  { title: "Brand signals", body: "We surface active sponsors, contact details, and recent campaign context." },
+                  { title: "Pitch draft", body: "We prepare a personalised outreach message you can send straight away." },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-xl border border-[#F0EDE8] bg-[#FAFAF8] p-3">
+                    <p className="text-sm font-semibold" style={{ color: "#0F0E0D", fontFamily: "var(--font-sans)" }}>{item.title}</p>
+                    <p className="mt-1 text-sm leading-relaxed" style={{ color: "#6B6760", fontFamily: "var(--font-sans)" }}>{item.body}</p>
                   </div>
-                  {i < 2 && (
-                    <div className="w-6 h-px" style={{ background: "#E8E6E1" }} />
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Queued */}
-          {isLoading && status?.stage === "queued" && (
-            <p className="text-sm mt-10 animate-pulse" style={{ color: "#A09A94", fontFamily: "var(--font-sans)" }}>
-              Starting analysis…
-            </p>
+          {isLoading && (
+            <div className="mt-8 rounded-2xl border border-[#F0EDE8] bg-[rgba(255,122,26,0.04)] p-4 text-left shadow-sm animate-fade-up delay-400">
+              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#0F0E0D", fontFamily: "var(--font-sans)" }}>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full" style={{ background: "rgba(255,122,26,0.12)", color: "#FF7A1A" }}>
+                  ●
+                </span>
+                {loadingHeadline}
+              </div>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: "#6B6760", fontFamily: "var(--font-sans)" }}>{loadingBody}</p>
+            </div>
           )}
 
           {/* Progress tracker */}

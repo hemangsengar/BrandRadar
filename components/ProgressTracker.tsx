@@ -40,6 +40,14 @@ export default function ProgressTracker({
   const currentIdx = STAGES.findIndex((s) => s.key === status.stage);
   const { running, completed } = countByStatus(status.agent_reports ?? []);
   const totalAgents = (status.agent_reports ?? []).length;
+  const stageMeta = {
+    discover: { label: "Discover", description: "Finding analogous creators in your niche" },
+    harvest: { label: "Harvest", description: "Collecting sponsorship evidence and recent signals" },
+    extract: { label: "Extract", description: "Pulling out contact details and context" },
+    enrich: { label: "Enrich", description: "Cross-checking brand fit and outreach relevance" },
+    draft: { label: "Draft", description: "Shaping a tailored pitch you can send" },
+  };
+  const currentStage = stageMeta[status.stage as keyof typeof stageMeta] ?? stageMeta.discover;
 
   return (
     <div
@@ -53,7 +61,18 @@ export default function ProgressTracker({
     >
       {/* Stage progress bar — connected dots */}
       <div className="px-5 pt-5 pb-4" style={{ borderBottom: "1px solid #F0EDE8" }}>
-        <div className="flex items-center gap-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.2em]" style={{ color: "#A09A94" }}>Live pipeline</p>
+            <p className="mt-1 text-sm font-semibold" style={{ color: "#0F0E0D" }}>
+              {currentStage.label}: {currentStage.description}
+            </p>
+          </div>
+          <div className="rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(255,122,26,0.08)", color: "#FF7A1A" }}>
+            {status.progress}% complete
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-0">
           {STAGES.map((s, i) => {
             const isDone   = i < currentIdx;
             const isActive = i === currentIdx;
@@ -121,7 +140,9 @@ export default function ProgressTracker({
         style={{ scrollbarWidth: "none" }}
       >
         {log.length === 0 && (
-          <p className="text-sm" style={{ color: "#A09A94" }}>Initialising…</p>
+          <p className="text-sm" style={{ color: "#A09A94" }}>
+            {status.stage === "queued" ? "Starting the analysis…" : `${currentStage.description}…`}
+          </p>
         )}
         {log.map((entry, i) => {
           const isLast = i === log.length - 1;
